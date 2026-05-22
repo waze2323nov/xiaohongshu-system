@@ -14,9 +14,10 @@ from datetime import datetime
 
 load_dotenv()
 
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", st.secrets.get("DEEPSEEK_API_KEY", ""))
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", st.secrets.get("OPENAI_API_KEY", ""))
+GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", st.secrets.get("GOOGLE_DRIVE_FOLDER_ID", ""))
+GOOGLE_TOKEN_BASE64 = os.getenv("GOOGLE_TOKEN_BASE64", st.secrets.get("GOOGLE_TOKEN_BASE64", ""))
 OAUTH_CREDENTIALS = "oauth_credentials.json"
 TOKEN_FILE = "token.pickle"
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
@@ -69,18 +70,36 @@ Style: 小红书 editorial aesthetic, tropical Malaysia atmosphere, warm colors,
 
 def get_drive_service():
     creds = None
-    if os.path.exists(TOKEN_FILE):
+    
+    # Method 1: Load from base64 token in secrets (for Streamlit Cloud)
+    if GOOGLE_TOKEN_BASE64:
+        try:
+            token_bytes = base64.b64decode(GOOGLE_TOKEN_BASE64)
+            creds = pickle.loads(token_bytes)
+        except Exception:
+            pass
+    
+    # Method 2: Load from local token file
+    if not creds and os.path.exists(TOKEN_FILE):
         with open(TOKEN_FILE, "rb") as f:
             creds = pickle.load(f)
     
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
+    # Refresh if expired
+    if creds and creds.expired and creds.refresh_token:
+        try:
             creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(OAUTH_CREDENTIALS, SCOPES)
-            creds = flow.run_local_server(port=0)
+        except Exception:
+            creds = None
+    
+    # Method 3: OAuth flow (local only)
+    if not creds and os.path.exists(OAUTH_CREDENTIALS):
+        flow = InstalledAppFlow.from_client_secrets_file(OAUTH_CREDENTIALS, SCOPES)
+        creds = flow.run_local_server(port=0)
         with open(TOKEN_FILE, "wb") as f:
             pickle.dump(creds, f)
+    
+    if not creds:
+        raise Exception("Google Drive 未授权。请在本地先运行 OAuth 授权。")
     
     return build("drive", "v3", credentials=creds)
 
@@ -101,24 +120,24 @@ def main():
     .stButton > button[kind="primary"] { background: linear-gradient(135deg, #ff4757, #ff6b81); border: none; border-radius: 10px; font-weight: 600; }
     </style>""", unsafe_allow_html=True)
 
+    drive_ready = bool(GOOGLE_TOKEN_BASE64) or os.path.exists(TOKEN_FILE) or os.path.exists(OAUTH_CREDENTIALS)
+
     with st.sidebar:
         st.markdown("## 🌺 内容生成系统")
-        st.caption("DeepSeek × GPT Image × Google Drive (OAuth)")
+        st.caption("DeepSeek × GPT Image × Google Drive")
         st.divider()
         st.markdown("### ⚙️ 生成设置")
         num_titles = st.slider("标题数量", 3, 10, 5)
-        auto_upload = st.toggle("自动上传 Google Drive", value=True)
+        auto_upload = st.toggle("自动上传 Google Drive", value=drive_ready)
         show_image_preview = st.toggle("显示图片预览", value=True)
         st.divider()
         st.markdown("### 🔌 API 状态")
         st.success("✅ DeepSeek") if DEEPSEEK_API_KEY else st.error("❌ DeepSeek")
         st.success("✅ OpenAI Image") if OPENAI_API_KEY else st.error("❌ OpenAI")
-        if os.path.exists(OAUTH_CREDENTIALS):
-            st.success("✅ Google Drive (OAuth)")
+        if drive_ready:
+            st.success("✅ Google Drive")
         else:
-            st.error("❌ oauth_credentials.json 未找到")
-        if os.path.exists(TOKEN_FILE):
-            st.info("🔐 已登录 Google")
+            st.warning("⚠️ Google Drive 未配置")
 
     st.markdown("# 🌺 小红书内容自动生成系统")
     st.caption("马来语课程专用 · 输入主题 → 自动生成标题 + 文案 + 配图 → 一键存入 Google Drive")
@@ -175,7 +194,7 @@ def main():
                     result["copy"] = generate_copy(title)
                     progress.progress((i/len(selected))+0.15, text=f"🎨 生成图片 ({i+1}/{len(selected)})…")
                     result["image_bytes"] = generate_image(title)
-                    if auto_upload and GOOGLE_DRIVE_FOLDER_ID and os.path.exists(OAUTH_CREDENTIALS):
+                    if auto_upload and GOOGLE_DRIVE_FOLDER_ID:
                         progress.progress((i/len(selected))+0.25, text=f"☁️ 上传 Drive ({i+1}/{len(selected)})…")
                         ts = datetime.now().strftime("%Y%m%d_%H%M")
                         safe = safe_filename(title)
