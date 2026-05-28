@@ -31,6 +31,43 @@ COURSE_CONTEXT = """
 核心痛点：租房看不懂合同、移民厅不讲英文、开会听不懂、做生意全程马来语、看病说不清症状
 """
 
+XHS_GUIDELINES = """
+【小红书内容规避规则 — 必须严格遵守】
+
+一、绝对禁止使用的违禁词：
+- 绝对化用语：最好、最强、第一、唯一、100%、绝对、万能、秒杀、史上最、全网最、NO.1、TOP1
+- 虚假承诺词：保证、包会、速成、立刻见效、一学就会、零失败、无效退款
+- 夸大效果词：逆袭、暴富、躺赚、一夜之间、彻底改变、完美解决
+- 医疗相关夸大词：治愈、根治、特效、神药、祖传秘方
+- 金融敏感词：稳赚不赔、高回报、理财推荐、投资必赚
+
+二、容易触发限流的行为（必须避免）：
+- 不要在文案里放微信号、QQ号、电话号码、任何外部链接
+- 不要出现"私信我"、"加我"、"联系方式在主页"等引流话术
+- 不要直接写价格促销信息如"限时优惠"、"打折"、"立减"
+- 不要使用谐音替代违禁词（如"最好"写成"zui好"）
+- 不要堆砌过多hashtag，最多5个且必须相关
+- 不要每篇文案结构和用词雷同，要保持多样性
+- 不要使用其他平台名称（抖音、快手、淘宝等）
+- 不要出现竞品品牌名称的直接对比或贬低
+
+三、安全的替代表达方式：
+- "最好" → "很值得推荐"、"亲测好用"、"强烈安利"
+- "保证学会" → "大多数学员反馈进步明显"
+- "速成" → "高效学习"、"短时间内能开口"
+- "第一" → "很受欢迎"、"口碑很好"
+- "100%有效" → "很多人觉得有帮助"
+- "私信我" → "评论区聊聊"、"欢迎交流"
+- "加微信" → "想了解更多可以留言"
+
+四、内容风格要求：
+- 语气真实自然，像朋友分享经验，不像广告
+- 软植入课程价值，不硬推销、不强行带货
+- 多用真实场景和个人体验视角
+- 避免过度营销感和紧迫感（不要用"赶紧"、"错过就没了"）
+- 适度使用emoji增强可读性，但不要过度堆砌
+"""
+
 PRESET_TOPICS = [
     "🏠 新移民租房踩坑", "🏛️ 移民厅跑流程", "💼 外派工程师",
     "🛒 巴刹夜市生活", "💰 大马做生意", "🏥 在大马看病",
@@ -39,9 +76,21 @@ PRESET_TOPICS = [
 
 def generate_titles(topic, num=5):
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    prompt = f"""你是小红书爆款标题专家。背景：{COURSE_CONTEXT}
+    prompt = f"""你是小红书爆款标题专家。
+
+背景：{COURSE_CONTEXT}
+
+{XHS_GUIDELINES}
+
 主题：{topic}
-生成{num}个爆款小红书标题，要求：强烈共鸣感、针对马来西亚华人/中国移民、口语化、每个带1-2个emoji、15-30字、多样化类型。
+
+生成{num}个爆款小红书标题，要求：
+1. 强烈共鸣感、针对马来西亚华人/中国移民
+2. 口语化、每个带1-2个emoji、15-30字
+3. 多样化类型（痛点型、干货型、故事型、对比型、悬念型）
+4. 严格遵守上面的小红书规避规则，不使用任何违禁词
+5. 标题不要有营销感，要像真实用户分享
+
 只返回标题列表，每行一个，不要编号。"""
     resp = requests.post("https://api.deepseek.com/chat/completions", headers=headers,
         json={"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}], "max_tokens": 600, "temperature": 0.9}, timeout=30)
@@ -51,9 +100,31 @@ def generate_titles(topic, num=5):
 
 def generate_copy(title):
     headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    prompt = f"""你是小红书爆款文案专家。背景：{COURSE_CONTEXT}
+    prompt = f"""你是小红书爆款文案专家。
+
+背景：{COURSE_CONTEXT}
+
+{XHS_GUIDELINES}
+
 根据标题写小红书文案：【{title}】
-格式：标题行 + 空行 + 正文200-250字（强钩子开头、真实场景、口语化、自然融入马来语课程价值、结尾引导互动）+ 空行 + 5个hashtag
+
+格式要求：
+标题行 + 空行 + 正文200-250字 + 空行 + 5个hashtag
+
+正文要求：
+1. 开头第一句必须是强钩子，让人停下来读
+2. 包含真实生活场景描述，有代入感和共鸣
+3. 口语化，像朋友聊天分享经验
+4. 自然融入学马来语/语言课程的价值，绝对不能硬推销
+5. 结尾用温和方式引导互动（评论区聊聊/你也有类似经历吗/收藏备用）
+6. 严格遵守上面的小红书规避规则：
+   - 不用任何违禁词和绝对化用语
+   - 不放任何联系方式和引流话术
+   - 不用"私信我"、"加我"、"限时"等限流词
+   - 用安全替代表达方式
+   - emoji适量使用（3-5个），不堆砌
+7. hashtag只用5个，必须和内容直接相关
+
 只返回文案，不要其他说明。"""
     resp = requests.post("https://api.deepseek.com/chat/completions", headers=headers,
         json={"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}], "max_tokens": 900, "temperature": 0.85}, timeout=30)
@@ -64,7 +135,14 @@ def generate_image(title):
     client = OpenAI(api_key=OPENAI_API_KEY)
     prompt = f"""Vibrant vertical social media image for Chinese lifestyle post about living in Malaysia.
 Concept: {title}
-Style: 小红书 editorial aesthetic, tropical Malaysia atmosphere, warm colors, KL city elements, NO text in image."""
+Style: 小红书 editorial aesthetic, tropical Malaysia atmosphere, warm colors, KL city elements.
+IMPORTANT RULES:
+- NO text, NO words, NO letters, NO watermarks, NO logos in the image
+- NO QR codes or barcodes
+- NO brand names or platform logos
+- NO contact information
+- Natural, authentic lifestyle photography feel
+- Clean composition with space for text overlay"""
     response = client.images.generate(model="gpt-image-1", prompt=prompt, size="1024x1536", quality="medium", n=1)
     return base64.b64decode(response.data[0].b64_json)
 
