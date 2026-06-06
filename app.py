@@ -133,10 +133,28 @@ def generate_copy(title):
 
 def generate_image(title):
     client = OpenAI(api_key=OPENAI_API_KEY)
+    import random
+    kl_landmarks = [
+        "KL Tower (Menara KL) with its distinctive spire",
+        "Merdeka 118 skyscraper, the tallest building in Southeast Asia",
+        "Sultan Abdul Samad Building with Moorish architecture",
+        "Batu Caves with its golden statue and colorful stairs",
+        "Pavilion KL shopping area in Bukit Bintang",
+        "Petaling Street (Chinatown) with red lanterns",
+        "old colonial shophouses along Jalan TAR",
+        "Masjid Jamek mosque at the river confluence",
+        "Exchange 106 tower in TRX",
+        "Thean Hou Temple with traditional Chinese architecture",
+        "Petronas Twin Towers (KLCC) skyline",
+        "bustling Jalan Alor food street at night",
+    ]
+    landmark = random.choice(kl_landmarks)
     prompt = f"""Vibrant vertical social media image for Chinese lifestyle post about living in Malaysia.
 Concept: {title}
-Style: 小红书 editorial aesthetic, tropical Malaysia atmosphere, warm colors, KL city elements.
+Featured landmark or scene: {landmark}
+Style: 小红书 editorial aesthetic, tropical Malaysia atmosphere, warm colors, authentic KL city life.
 IMPORTANT RULES:
+- DO NOT default to Petronas Twin Towers / KLCC — use the specified landmark or scene above
 - NO text, NO words, NO letters, NO watermarks, NO logos in the image
 - NO QR codes or barcodes
 - NO brand names or platform logos
